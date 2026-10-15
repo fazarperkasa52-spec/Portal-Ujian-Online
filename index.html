@@ -15,7 +15,7 @@
     <!-- Mammoth.js for Word (docx) Import -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     
-    <!-- 1. CDN SUPABASE -->
+    <!-- 1. CDN SUPABASE (Dimuat paling awal di Head) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -52,7 +52,6 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        /* Printable Styles for Exam Cards & Reports */
         @media print {
             .no-print { display: none !important; }
             .print-only { display: block !important; }
@@ -72,13 +71,19 @@
     <!-- MAIN JAVASCRIPT LOGIC -->
     <script>
         // ==========================================
-        // 2. INISIALISASI SUPABASE CLIENT
+        // 2. INISIALISASI SUPABASE CLIENT AMAN
         // ==========================================
-        const SUPABASE_URL = "https://sgaphsxicbfooetffxmp.supabase.co/rest/v1/";
+        const SUPABASE_PROJECT_URL = "https://sgaphsxicbfooetffxmp.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnYXBoc3hpY2Jmb29ldGZmeG1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwNzI2NDksImV4cCI6MjEwNzY0ODY0OX0.ruazxMPIG2b33WVLILg89Q9dw-K0HmYWcyG7RYyRShs";
         
-        // Inisialisasi Supabase SDK
-        const _supabase = supabase.createClient("https://sgaphsxicbfooetffxmp.supabase.co", SUPABASE_KEY);
+        let _supabase = null;
+        try {
+            if (window.supabase) {
+                _supabase = window.supabase.createClient(SUPABASE_PROJECT_URL, SUPABASE_KEY);
+            }
+        } catch (err) {
+            console.error("Supabase Init Error:", err);
+        }
 
         // ==========================================
         // INITIAL DATA & STORAGE MANAGEMENT
@@ -108,7 +113,7 @@
                 teacherId: "u_guru1",
                 token: "MTK123",
                 useToken: true,
-                duration: 60, // in minutes
+                duration: 60,
                 isActive: true,
                 startTime: "2026-10-15T08:00",
                 endTime: "2026-10-20T23:59",
@@ -140,7 +145,6 @@
             }
         ];
 
-        // Storage Handlers
         function getStoredData(key, defaultVal) {
             try {
                 const data = localStorage.getItem('cbt_' + key);
@@ -159,7 +163,6 @@
             }
         }
 
-        // Global Application State
         let AppState = {
             currentUser: getStoredData('currentUser', null),
             settings: getStoredData('settings', DEFAULT_SETTINGS),
@@ -179,11 +182,9 @@
             setStoredData('currentUser', AppState.currentUser);
         }
 
-        // ==========================================
-        // UI UTILITIES & TOASTS
-        // ==========================================
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
+            if (!container) return;
             const toast = document.createElement('div');
             
             const bgColors = {
@@ -208,21 +209,16 @@
             `;
 
             container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.remove('translate-y-4', 'opacity-0');
-            }, 10);
-
+            setTimeout(() => { toast.classList.remove('translate-y-4', 'opacity-0'); }, 10);
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => toast.remove(), 300);
             }, 4000);
         }
 
-        // ==========================================
-        // NAVIGATION & ROUTING
-        // ==========================================
         function renderApp() {
             const app = document.getElementById('app');
+            if (!app) return;
             app.innerHTML = '';
 
             if (!AppState.currentUser) {
@@ -262,9 +258,6 @@
             app.appendChild(layout);
         }
 
-        // ==========================================
-        // LOGIN PAGE
-        // ==========================================
         function renderLoginPage() {
             const container = document.createElement('div');
             container.className = "min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-brand-900 to-slate-900 relative overflow-hidden";
@@ -320,35 +313,34 @@
 
             setTimeout(() => {
                 const form = container.querySelector('#login-form');
-                form.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const uVal = container.querySelector('#login-username').value.trim();
-                    const pVal = container.querySelector('#login-password').value.trim();
-                    const rVal = container.querySelector('#login-role').value;
+                if (form) {
+                    form.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        const uVal = container.querySelector('#login-username').value.trim();
+                        const pVal = container.querySelector('#login-password').value.trim();
+                        const rVal = container.querySelector('#login-role').value;
 
-                    const user = AppState.users.find(u => u.username.toLowerCase() === uVal.toLowerCase() && u.password === pVal);
+                        const user = AppState.users.find(u => u.username.toLowerCase() === uVal.toLowerCase() && u.password === pVal);
 
-                    if (user) {
-                        if (rVal !== 'auto' && !user.role.includes(rVal)) {
-                            showToast(`Akun ditemukan tetapi bukan bertipe ${rVal.toUpperCase()}`, 'warning');
-                            return;
+                        if (user) {
+                            if (rVal !== 'auto' && !user.role.includes(rVal)) {
+                                showToast(`Akun ditemukan tetapi bukan bertipe ${rVal.toUpperCase()}`, 'warning');
+                                return;
+                            }
+                            AppState.currentUser = user;
+                            saveAllState();
+                            showToast(`Selamat datang, ${user.name}!`, 'success');
+                            renderApp();
+                        } else {
+                            showToast('Username atau password salah!', 'danger');
                         }
-                        AppState.currentUser = user;
-                        saveAllState();
-                        showToast(`Selamat datang, ${user.name}!`, 'success');
-                        renderApp();
-                    } else {
-                        showToast('Username atau password salah!', 'danger');
-                    }
-                });
+                    });
+                }
             }, 0);
 
             return container;
         }
 
-        // ==========================================
-        // SIDEBAR & TOPNAV
-        // ==========================================
         let currentTab = 'dashboard';
 
         function renderSidebar() {
@@ -459,9 +451,6 @@
             showToast('Anda telah keluar dari akun.', 'info');
         }
 
-        // ==========================================
-        // ADMIN DASHBOARD & FEATURES
-        // ==========================================
         function renderAdminDashboard() {
             const wrapper = document.createElement('div');
             wrapper.className = "space-y-6";
@@ -507,7 +496,6 @@
                         </div>
                     </div>
 
-                    <!-- Live Anti-Cheat Monitoring Panel -->
                     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
                         <div class="flex items-center justify-between mb-4">
                             <div>
@@ -570,7 +558,6 @@
             return wrapper;
         }
 
-        // --- USER MANAGEMENT (MASS IMPORT EXCEL & ADD MANUAL) ---
         function renderUserManagement() {
             const container = document.createElement('div');
             container.className = "space-y-6";
@@ -770,7 +757,6 @@
             });
         }
 
-        // --- PRINT EXAM CARDS WITH CUSTOM SCHOOL BRANDING ---
         function renderExamCardsPrint() {
             const container = document.createElement('div');
             container.className = "space-y-6";
@@ -790,7 +776,6 @@
                     </div>
                 </div>
 
-                <!-- Printable Cards Container -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     ${students.map(s => `
                         <div class="bg-white border-2 border-slate-800 rounded-xl p-4 relative overflow-hidden shadow-sm flex flex-col justify-between">
@@ -828,7 +813,6 @@
             return container;
         }
 
-        // --- SCHOOL SETTINGS & LOGO UPLOAD ---
         function renderSchoolSettings() {
             const container = document.createElement('div');
             container.className = "bg-white rounded-2xl border border-slate-200 shadow-sm p-6 max-w-2xl space-y-5";
@@ -872,33 +856,35 @@
                 const logoInput = container.querySelector('#set-logo-input');
                 const logoPreview = container.querySelector('#set-logo-preview');
                 
-                logoInput.addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (evt) => {
-                            logoPreview.src = evt.target.result;
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                });
+                if (logoInput) {
+                    logoInput.addEventListener('change', (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (evt) => { logoPreview.src = evt.target.result; };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                }
 
-                container.querySelector('#settings-form').addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    AppState.settings.schoolName = container.querySelector('#set-school-name').value;
-                    AppState.settings.schoolLogo = logoPreview.src;
-                    AppState.settings.maxViolationCount = parseInt(container.querySelector('#set-max-violation').value);
-                    
-                    saveAllState();
-                    renderApp();
-                    showToast('Pengaturan sekolah & kecurangan berhasil diperbarui!', 'success');
-                });
+                const settingsForm = container.querySelector('#settings-form');
+                if (settingsForm) {
+                    settingsForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        AppState.settings.schoolName = container.querySelector('#set-school-name').value;
+                        AppState.settings.schoolLogo = logoPreview.src;
+                        AppState.settings.maxViolationCount = parseInt(container.querySelector('#set-max-violation').value);
+                        
+                        saveAllState();
+                        renderApp();
+                        showToast('Pengaturan sekolah & kecurangan berhasil diperbarui!', 'success');
+                    });
+                }
             }, 0);
 
             return container;
         }
 
-        // --- EXAM SCHEDULE & PERMISSION MANAGEMENT ---
         function renderExamScheduleAdmin() {
             const container = document.createElement('div');
             container.className = "bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4";
@@ -954,9 +940,6 @@
             }
         }
 
-        // ==========================================
-        // TEACHER DASHBOARD & EXAM BUILDER
-        // ==========================================
         function renderGuruDashboard() {
             const wrapper = document.createElement('div');
             wrapper.className = "space-y-6";
@@ -1112,7 +1095,6 @@
             showToast('Ujian telah dihapus.', 'info');
         }
 
-        // --- QUESTION BUILDER ---
         function openQuestionBuilderModal(examId) {
             const exam = AppState.exams.find(e => e.id === examId);
             if (!exam) return;
@@ -1130,7 +1112,6 @@
                         <button onclick="this.closest('.fixed').remove(); renderApp();" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fa-solid fa-xmark"></i></button>
                     </div>
 
-                    <!-- Import Word / Fast Bulk Tools -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                         <div class="text-xs font-bold uppercase tracking-wider text-slate-600">Import Soal dari Word (DOCX) </div>
                         <div class="flex flex-wrap gap-2">
@@ -1144,7 +1125,6 @@
                         </div>
                     </div>
 
-                    <!-- Single / Fast Question Creator Form -->
                     <form id="q-builder-form" class="bg-white p-4 border border-slate-200 rounded-xl space-y-3">
                         <div class="text-xs font-bold text-slate-700">Tambah Soal Manual</div>
                         <div class="grid grid-cols-2 gap-3">
@@ -1182,7 +1162,6 @@
                         </button>
                     </form>
 
-                    <!-- Questions List -->
                     <div class="space-y-3">
                         <div class="text-xs font-bold uppercase text-slate-500">Daftar Soal Dibuat</div>
                         ${exam.questions.map((q, idx) => `
@@ -1208,14 +1187,17 @@
             document.body.appendChild(modal);
 
             let imgDataUrl = "";
-            modal.querySelector('#qb-image-file').addEventListener('change', (e) => {
-                const f = e.target.files[0];
-                if (f) {
-                    const r = new FileReader();
-                    r.onload = (evt) => { imgDataUrl = evt.target.result; };
-                    r.readAsDataURL(f);
-                }
-            });
+            const imageInput = modal.querySelector('#qb-image-file');
+            if (imageInput) {
+                imageInput.addEventListener('change', (e) => {
+                    const f = e.target.files[0];
+                    if (f) {
+                        const r = new FileReader();
+                        r.onload = (evt) => { imgDataUrl = evt.target.result; };
+                        r.readAsDataURL(f);
+                    }
+                });
+            }
 
             modal.querySelector('#q-builder-form').addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -1350,7 +1332,6 @@ E. 19
             reader.readAsArrayBuffer(file);
         }
 
-        // --- EXAM RECAP & PRINT REPORT ---
         function renderExamReportsGuru() {
             const container = document.createElement('div');
             container.className = "bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4";
@@ -1397,9 +1378,6 @@ E. 19
             return container;
         }
 
-        // ==========================================
-        // STUDENT DASHBOARD & CBT EXAM INTERFACE
-        // ==========================================
         function renderSiswaDashboard() {
             const container = document.createElement('div');
             container.className = "space-y-6";
@@ -1517,9 +1495,6 @@ E. 19
             }
         }
 
-        // ==========================================
-        // REALTIME FULLSCREEN ANTI-CHEAT EXAM ENGINE
-        // ==========================================
         function launchCbtSession(exam) {
             AppState.activeExamSession = {
                 exam: exam,
@@ -1551,7 +1526,6 @@ E. 19
             const timerStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 
             container.innerHTML = `
-                <!-- Top Lock Banner -->
                 <header class="bg-slate-900 text-white px-6 py-3 flex items-center justify-between shadow-md">
                     <div class="flex items-center gap-3">
                         <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
@@ -1559,12 +1533,10 @@ E. 19
                     </div>
 
                     <div class="flex items-center gap-6">
-                        <!-- Anti Cheat Warning Count -->
                         <div class="text-xs font-bold px-3 py-1 bg-rose-500/20 text-rose-300 rounded-full border border-rose-500/30">
                             Pelanggaran: <span id="violation-badge">${session.violationCount}</span> / ${AppState.settings.maxViolationCount}
                         </div>
 
-                        <!-- Countdown Timer -->
                         <div class="bg-brand-600 px-4 py-1.5 rounded-xl font-mono text-base font-bold text-white shadow-inner flex items-center gap-2">
                             <i class="fa-solid fa-stopwatch text-sm"></i>
                             <span id="exam-timer-display">${timerStr}</span>
@@ -1572,9 +1544,7 @@ E. 19
                     </div>
                 </header>
 
-                <!-- Exam Body Container -->
                 <div class="flex-1 flex overflow-hidden">
-                    <!-- Question Main Panel -->
                     <main class="flex-1 p-6 overflow-y-auto custom-scrollbar flex flex-col justify-between">
                         <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-4">
                             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -1586,7 +1556,6 @@ E. 19
 
                             ${currentQ.image ? `<img src="${currentQ.image}" class="max-h-64 object-contain rounded-xl my-3">` : ''}
 
-                            <!-- Answers Options -->
                             <div class="space-y-2.5 pt-2">
                                 ${currentQ.type === 'pg' ? Object.entries(currentQ.options || {}).map(([optKey, optVal]) => {
                                     const isSelected = session.answers[currentQ.id] === optKey;
@@ -1602,7 +1571,6 @@ E. 19
                             </div>
                         </div>
 
-                        <!-- Exam Navigation Buttons -->
                         <div class="flex items-center justify-between pt-4">
                             <button onclick="navQuestion(-1)" ${session.currentQuestionIndex === 0 ? 'disabled' : ''} class="px-5 py-2.5 bg-slate-200 text-slate-700 disabled:opacity-50 rounded-xl font-semibold text-xs flex items-center gap-2">
                                 <i class="fa-solid fa-arrow-left"></i> Soal Sebelumnya
@@ -1618,7 +1586,6 @@ E. 19
                         </div>
                     </main>
 
-                    <!-- Question Number Grid Side Panel -->
                     <aside class="w-72 bg-white border-l border-slate-200 p-5 hidden lg:flex flex-col justify-between">
                         <div>
                             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">Navigasi Nomor Soal</h4>
@@ -1665,7 +1632,6 @@ E. 19
             return container;
         }
 
-        // --- ANTI-CHEAT ENGINE DETECTORS ---
         let antiCheatSetupDone = false;
         function setupAntiCheatEvents() {
             if (antiCheatSetupDone) return;
@@ -1753,10 +1719,12 @@ E. 19
             }
         }
 
-        // ==========================================
-        // 3. FUNGSI KIRIM DATA KE SUPABASE
-        // ==========================================
         async function saveResultToSupabase(resultObj) {
+            if (!_supabase) {
+                console.warn("Supabase tidak terhubung. Data hanya tersimpan di browser.");
+                return;
+            }
+
             try {
                 const { data, error } = await _supabase
                     .from('exam_results')
@@ -1822,7 +1790,6 @@ E. 19
 
             AppState.examResults.push(resultObj);
             
-            // Panggilan fungsi pengiriman data ke Supabase
             saveResultToSupabase(resultObj);
 
             AppState.activeExamSession = null;
@@ -1838,20 +1805,11 @@ E. 19
             showToast(`Ujian Selesai! Nilai Anda: ${finalScore} (${reason})`, 'success');
         }
 
-        // ==========================================
-        // GOOGLE APPS SCRIPT (GAS) CODE & GUIDE TAB
-        // ==========================================
         function renderGasGuide() {
             const container = document.createElement('div');
             container.className = "bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6";
 
             const gasScriptCode = `
-// ===================================================
-// GOOGLE APPS SCRIPT (GAS) BACKEND CBT SYSTEM
-// Buka Google Sheets -> Extensions -> Apps Script
-// Paste Script ini lalu Deploy as Web App (Anyone)
-// ===================================================
-
 function doGet(e) {
   var op = e.parameter.op;
   var sheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -1907,12 +1865,9 @@ function responseJSON(obj) {
             return container;
         }
 
-        // ==========================================
-        // INITIALIZATION
-        // ==========================================
-        window.onload = function() {
+        window.addEventListener('DOMContentLoaded', () => {
             renderApp();
-        };
+        });
     </script>
 </body>
 </html>
