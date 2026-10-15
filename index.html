@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <!-- Supabase JS Client -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Ujian Terintegrasi</title>
@@ -17,6 +15,9 @@
     <!-- Mammoth.js for Word (docx) Import -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     
+    <!-- 1. CDN SUPABASE -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -70,14 +71,14 @@
 
     <!-- MAIN JAVASCRIPT LOGIC -->
     <script>
+        // ==========================================
+        // 2. INISIALISASI SUPABASE CLIENT
+        // ==========================================
+        const SUPABASE_URL = "https://sgaphsxicbfooetffxmp.supabase.co/rest/v1/";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnYXBoc3hpY2Jmb29ldGZmeG1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwNzI2NDksImV4cCI6MjEwNzY0ODY0OX0.ruazxMPIG2b33WVLILg89Q9dw-K0HmYWcyG7RYyRShs";
         
-// Inisialisasi Supabase
-const SUPABASE_URL = 'https://sgaphsxicbfooetffxmp.supabase.co/rest/v1/';
-const SUPABASE_KEY = ' eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNnYXBoc3hpY2Jmb29ldGZmeG1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwNzI2NDksImV4cCI6MjEwNzY0ODY0OX0.ruazxMPIG2b33WVLILg89Q9dw-K0HmYWcyG7RYyRShs';
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-
-sb_publishable_BASE8IqESCQ9fRx4RQBnyQ_6C8A4uHV
+        // Inisialisasi Supabase SDK
+        const _supabase = supabase.createClient("https://sgaphsxicbfooetffxmp.supabase.co", SUPABASE_KEY);
 
         // ==========================================
         // INITIAL DATA & STORAGE MANAGEMENT
@@ -164,9 +165,9 @@ sb_publishable_BASE8IqESCQ9fRx4RQBnyQ_6C8A4uHV
             settings: getStoredData('settings', DEFAULT_SETTINGS),
             users: getStoredData('users', DEFAULT_USERS),
             exams: getStoredData('exams', DEFAULT_EXAMS),
-            examResults: getStoredData('examResults', []), // [{examId, studentId, score, answers, violations:[], submittedAt}]
-            liveViolations: getStoredData('liveViolations', []), // [{studentId, studentName, examId, type, time}]
-            activeExamSession: null // For student exam mode
+            examResults: getStoredData('examResults', []),
+            liveViolations: getStoredData('liveViolations', []),
+            activeExamSession: null
         };
 
         function saveAllState() {
@@ -229,13 +230,11 @@ sb_publishable_BASE8IqESCQ9fRx4RQBnyQ_6C8A4uHV
                 return;
             }
 
-            // Student active exam takes priority full screen UI
             if (AppState.activeExamSession && AppState.currentUser.role === 'siswa') {
                 app.appendChild(renderStudentExamInterface());
                 return;
             }
 
-            // Standard Dashboard layout
             const layout = document.createElement('div');
             layout.className = "flex h-screen bg-slate-100 overflow-hidden";
 
@@ -362,23 +361,19 @@ sb_publishable_BASE8IqESCQ9fRx4RQBnyQ_6C8A4uHV
             let menuItems = [];
 
             if (role.includes('admin')) {
-               if (role.includes('admin')) {
-    // Menu dasar untuk semua role admin (Admin, Waka, Pengawas)
-    menuItems = [
-        { id: 'dashboard', label: 'Dashboard & Monitor', icon: 'fa-chart-pie' },
-        { id: 'users', label: 'Manajemen Akun', icon: 'fa-users-gear' },
-        { id: 'exam_schedule', label: 'Jadwal & Aktivasi', icon: 'fa-calendar-check' },
-        { id: 'exam_cards', label: 'Cetak Kartu Ujian', icon: 'fa-id-card' }
-    ];
+                menuItems = [
+                    { id: 'dashboard', label: 'Dashboard & Monitor', icon: 'fa-chart-pie' },
+                    { id: 'users', label: 'Manajemen Akun', icon: 'fa-users-gear' },
+                    { id: 'exam_schedule', label: 'Jadwal & Aktivasi', icon: 'fa-calendar-check' },
+                    { id: 'exam_cards', label: 'Cetak Kartu Ujian', icon: 'fa-id-card' }
+                ];
 
-    // Menu khusus hanya untuk Super Admin ('admin')
-    if (role === 'admin') {
-        menuItems.push(
-            { id: 'settings', label: 'Pengaturan Sekolah', icon: 'fa-sliders' },
-            { id: 'gas_guide', label: 'Integration Cloud & GAS', icon: 'fa-cloud-arrow-up' }
-        );
-    }
-}
+                if (role === 'admin') {
+                    menuItems.push(
+                        { id: 'settings', label: 'Pengaturan Sekolah', icon: 'fa-sliders' },
+                        { id: 'gas_guide', label: 'Integration Cloud & GAS', icon: 'fa-cloud-arrow-up' }
+                    );
+                }
             } else if (role === 'guru') {
                 menuItems = [
                     { id: 'dashboard', label: 'Monitoring Ujian', icon: 'fa-desktop' },
@@ -624,7 +619,7 @@ sb_publishable_BASE8IqESCQ9fRx4RQBnyQ_6C8A4uHV
                                                 ${u.role}
                                             </span>
                                         </td>
-                                        <td class="p-3 text-slate-600 text-xs">${u.nis_nip || '-'} ${u.class ? `(${u.class})` : ''}</td>
+                                        <td class="p-3 text-slate-600 text-xs">${u.nis_nip \vert{}\vert{} '-'}${u.class ? `(${u.class})` : ''}</td>
                                         <td class="p-3 text-right">
                                             <button onclick="deleteUser('${u.id}')" class="text-rose-500 hover:text-rose-700 p-1.5"><i class="fa-solid fa-trash"></i></button>
                                         </td>
@@ -1117,7 +1112,7 @@ sb_publishable_BASE8IqESCQ9fRx4RQBnyQ_6C8A4uHV
             showToast('Ujian telah dihapus.', 'info');
         }
 
-        // --- QUESTION BUILDER (WORD IMPORT, BULK ADD, IMAGE UPLOAD) ---
+        // --- QUESTION BUILDER ---
         function openQuestionBuilderModal(examId) {
             const exam = AppState.exams.find(e => e.id === examId);
             if (!exam) return;
@@ -1196,12 +1191,11 @@ sb_publishable_BASE8IqESCQ9fRx4RQBnyQ_6C8A4uHV
                                     <span class="font-bold text-xs bg-slate-200 px-2 py-0.5 rounded text-slate-700">Soal #${idx + 1} (${q.type.toUpperCase()})</span>
                                     <button onclick="deleteQuestion('${exam.id}', '${q.id}')" class="text-rose-500 text-xs hover:text-rose-700 font-bold">Hapus</button>
                                 </div>
-                                <p class="text-sm font-medium text-slate-800 mt-2">${q.question}</p>
-                                ${q.image ? `<img src="${q.image}" class="max-h-32 rounded my-2 object-contain">` : ''}
+                                <p class="text-sm font-medium text-slate-800 mt-2">${q.question}</p>${q.image ? `<img src="${q.image}" class="max-h-32 rounded my-2 object-contain">` : ''}
                                 ${q.type === 'pg' ? `
                                     <div class="grid grid-cols-2 gap-1 text-xs text-slate-600 mt-2">
                                         ${Object.entries(q.options || {}).map(([k, v]) => `
-                                            <div class="${q.answer === k ? 'font-bold text-emerald-600' : ''}">${k}. ${v}</div>
+                                            <div class="${q.answer === k ? 'font-bold text-emerald-600' : ''}">${k}.${v}</div>
                                         `).join('')}
                                     </div>
                                 ` : ''}
@@ -1267,8 +1261,7 @@ sb_publishable_BASE8IqESCQ9fRx4RQBnyQ_6C8A4uHV
         }
 
         function downloadWordTemplate() {
-    // Membuat atau mengunduh struktur template Word yang kompatibel dengan Mammoth.js
-    const content = `
+            const content = `
 TEMPLATE SOAL PORTAL UJIAN 
 ================================
 
@@ -1302,16 +1295,17 @@ E. 19
 [Kunci Jawaban Uraian: Hitung turunan pertama f'(x) = 0 untuk mendapat titik stasioner, lalu bandingkan nilai fungsi di titik stasioner dan batas interval.]
 `.trim();
 
-    const blob = new Blob([content], { type: 'application/msword' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'Template_Soal_Portal_Ujian.doc';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showToast('Template Soal Word berhasil di-download!', 'success');
-}
+            const blob = new Blob([content], { type: 'application/msword' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Template_Soal_Portal_Ujian.doc';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast('Template Soal Word berhasil di-download!', 'success');
+        }
+
         function importWordDocx(e, examId) {
             const file = e.target.files[0];
             if (!file) return;
@@ -1326,7 +1320,6 @@ E. 19
                         const exam = AppState.exams.find(ex => ex.id === examId);
                         let parsedCount = 0;
 
-                        // Basic Parser Logic for Word
                         for (let i = 0; i < lines.length; i++) {
                             if (lines[i].toLowerCase().startsWith('soal:') || lines[i].match(/^\d+\./)) {
                                 const qText = lines[i].replace(/^\d+\.|soal:/i, '').trim();
@@ -1417,7 +1410,7 @@ E. 19
                 container.innerHTML = `
                     <div class="bg-gradient-to-r from-brand-700 to-brand-900 text-white p-6 rounded-2xl shadow-xl">
                         <h2 class="text-xl font-bold">Selamat Datang, ${user.name}!</h2>
-                        <p class="text-xs text-brand-200 mt-1">SPortal Ujian Terintegrasi</p>
+                        <p class="text-xs text-brand-200 mt-1">Portal Ujian Terintegrasi</p>
                     </div>
 
                     <div class="space-y-4">
@@ -1431,7 +1424,7 @@ E. 19
                                         <div class="flex justify-between items-start">
                                             <div>
                                                 <h4 class="font-bold text-slate-800 text-base">${e.title}</h4>
-                                                <p class="text-xs text-slate-500 font-semibold">${e.subject} | Durasi: ${e.duration} Menit</p>
+                                                <p class="text-xs text-slate-500 font-semibold">${e.subject} \vert{} Durasi:${e.duration} Menit</p>
                                             </div>
                                             <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isTaken ? 'bg-slate-100 text-slate-500' : e.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
                                                 ${isTaken ? 'SUDAH DIKERJAKAN (1x AKSES)' : e.isActive ? 'SIAP DIMAINKAN' : 'DIKUNCI GURU'}
@@ -1500,7 +1493,7 @@ E. 19
                         </div>
                         <h3 class="text-lg font-bold text-slate-800">Masukkan Token Ujian</h3>
                         <p class="text-xs text-slate-500">Minta token resmi dari guru atau pengawas ujian Anda</p>
-                        <input type="text" id="student-token-input" uppercase font-mono placeholder="TOKEN" class="w-full text-center px-4 py-2.5 border-2 border-slate-300 rounded-xl text-lg font-bold uppercase tracking-widest focus:border-brand-500">
+                        <input type="text" id="student-token-input" placeholder="TOKEN" class="w-full text-center px-4 py-2.5 border-2 border-slate-300 rounded-xl text-lg font-bold uppercase tracking-widest focus:border-brand-500">
                         <div class="flex gap-2 pt-2">
                             <button onclick="this.closest('.fixed').remove()" class="w-1/2 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">Batal</button>
                             <button id="btn-submit-token" class="w-1/2 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold">Verifikasi Token</button>
@@ -1533,11 +1526,10 @@ E. 19
                 answers: {},
                 currentQuestionIndex: 0,
                 violationCount: 0,
-                timeLeft: exam.duration * 60, // seconds
+                timeLeft: exam.duration * 60,
                 timerInterval: null
             };
 
-            // Request full screen lock
             if (document.documentElement.requestFullscreen) {
                 document.documentElement.requestFullscreen().catch(() => {});
             }
@@ -1554,7 +1546,6 @@ E. 19
             const container = document.createElement('div');
             container.className = "fixed inset-0 bg-slate-100 z-50 flex flex-col no-select overflow-hidden";
 
-            // Format Timer
             const m = Math.floor(session.timeLeft / 60);
             const s = session.timeLeft % 60;
             const timerStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
@@ -1652,7 +1643,6 @@ E. 19
                 </div>
             `;
 
-            // Start Timer if not running
             if (!session.timerInterval) {
                 session.timerInterval = setInterval(() => {
                     session.timeLeft--;
@@ -1670,7 +1660,6 @@ E. 19
                 }, 1000);
             }
 
-            // Register Real-time Anti-Cheat Protection Event Handlers
             setupAntiCheatEvents();
 
             return container;
@@ -1698,22 +1687,7 @@ E. 19
                     type: reason,
                     time: new Date().toLocaleTimeString('id-ID')
                 };
-                
-// Kirim log kecurangan ke Supabase
-if (typeof supabaseClient !== 'undefined') {
-                    supabaseClient
-                        .from('live_violations')
-                        .insert([{
-                            student_id: user.id,
-                            student_name: user.name,
-                            exam_title: session.exam.title,
-                            type: reason
-                        }])
-                        .then(({ error }) => {
-                            if (error) console.error("Gagal kirim log kecurangan ke Supabase:", error);
-                        });
-                }
-  }]);
+
                 AppState.liveViolations.push(violationRecord);
                 saveAllState();
 
@@ -1724,28 +1698,24 @@ if (typeof supabaseClient !== 'undefined') {
                 }
             };
 
-            // 1. Detect Tab Switch / Minimize
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden && AppState.activeExamSession) {
                     triggerCheatLog('Pindah Tab / Minimasi Browser');
                 }
             });
 
-            // 2. Detect Blur Window
             window.addEventListener('blur', () => {
                 if (AppState.activeExamSession) {
                     triggerCheatLog('Fokus Window Hilang / Buka Chatbot AI');
                 }
             });
 
-            // 3. Block Copy-Paste, Shortcut, F12, Right Click
             document.addEventListener('copy', (e) => { if (AppState.activeExamSession) { e.preventDefault(); triggerCheatLog('Mencoba Copy Teks'); } });
             document.addEventListener('paste', (e) => { if (AppState.activeExamSession) { e.preventDefault(); triggerCheatLog('Mencoba Paste Teks'); } });
             document.addEventListener('contextmenu', (e) => { if (AppState.activeExamSession) { e.preventDefault(); triggerCheatLog('Klik Kanan Dilarang'); } });
 
             document.addEventListener('keydown', (e) => {
                 if (!AppState.activeExamSession) return;
-                // Block Ctrl+C, Ctrl+V, Alt+Tab, F12
                 if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'a', 'x', 'p', 's', 'u'].includes(e.key.toLowerCase())) {
                     e.preventDefault();
                     triggerCheatLog(`Shortkey Dilarang (Ctrl+${e.key.toUpperCase()})`);
@@ -1783,6 +1753,36 @@ if (typeof supabaseClient !== 'undefined') {
             }
         }
 
+        // ==========================================
+        // 3. FUNGSI KIRIM DATA KE SUPABASE
+        // ==========================================
+        async function saveResultToSupabase(resultObj) {
+            try {
+                const { data, error } = await _supabase
+                    .from('exam_results')
+                    .insert([
+                        {
+                            student_id: resultObj.studentId,
+                            student_name: resultObj.studentName,
+                            exam_id: resultObj.examId,
+                            exam_title: resultObj.examTitle,
+                            score: resultObj.score,
+                            answers: resultObj.answers,
+                            violations_count: resultObj.violationsCount,
+                            submitted_at: new Date()
+                        }
+                    ]);
+
+                if (error) {
+                    console.error("Gagal mengirim data ke Supabase:", error);
+                } else {
+                    console.log("Data berhasil tersimpan di Supabase:", data);
+                }
+            } catch (err) {
+                console.error("Error Koneksi Supabase:", err);
+            }
+        }
+
         function autoSubmitExam(reason) {
             const session = AppState.activeExamSession;
             if (!session) return;
@@ -1790,7 +1790,6 @@ if (typeof supabaseClient !== 'undefined') {
             clearInterval(session.timerInterval);
             session.timerInterval = null;
 
-            // Calculate Score
             const questions = session.exam.questions;
             let correctCount = 0;
             let totalPg = 0;
@@ -1820,24 +1819,12 @@ if (typeof supabaseClient !== 'undefined') {
                 violationsCount: session.violationCount,
                 submittedAt: new Date().toLocaleString('id-ID')
             };
-// Kirim ke Supabase
-// --- SISIPKAN KODE SUPABASE DI SINI ---
-            if (typeof supabaseClient !== 'undefined') {
-                supabaseClient
-                    .from('exam_results')
-                    .insert([{
-                        student_id: user.id,
-                        student_name: user.name,
-                        exam_id: session.exam.id,
-                        exam_title: session.exam.title,
-                        score: finalScore,
-                        violations_count: session.violationCount
-                    }])
-                    .then(({ error }) => {
-                        if (error) console.error("Gagal simpan ke Supabase:", error);
-                        else console.log("Hasil ujian berhasil dikirim ke Supabase!");
-                    });
-            }            AppState.examResults.push(resultObj);
+
+            AppState.examResults.push(resultObj);
+            
+            // Panggilan fungsi pengiriman data ke Supabase
+            saveResultToSupabase(resultObj);
+
             AppState.activeExamSession = null;
             antiCheatSetupDone = false;
 
