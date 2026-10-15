@@ -1698,14 +1698,21 @@ E. 19
                     type: reason,
                     time: new Date().toLocaleTimeString('id-ID')
                 };
+                
 // Kirim log kecurangan ke Supabase
-supabaseClient
-  .from('live_violations')
-  .insert([{
-    student_id: user.id,
-    student_name: user.name,
-    exam_title: session.exam.title,
-    type: reason
+if (typeof supabaseClient !== 'undefined') {
+                    supabaseClient
+                        .from('live_violations')
+                        .insert([{
+                            student_id: user.id,
+                            student_name: user.name,
+                            exam_title: session.exam.title,
+                            type: reason
+                        }])
+                        .then(({ error }) => {
+                            if (error) console.error("Gagal kirim log kecurangan ke Supabase:", error);
+                        });
+                }
   }]);
                 AppState.liveViolations.push(violationRecord);
                 saveAllState();
