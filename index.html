@@ -1698,7 +1698,15 @@ E. 19
                     type: reason,
                     time: new Date().toLocaleTimeString('id-ID')
                 };
-
+// Kirim log kecurangan ke Supabase
+supabaseClient
+  .from('live_violations')
+  .insert([{
+    student_id: user.id,
+    student_name: user.name,
+    exam_title: session.exam.title,
+    type: reason
+  }]);
                 AppState.liveViolations.push(violationRecord);
                 saveAllState();
 
@@ -1805,7 +1813,21 @@ E. 19
                 violationsCount: session.violationCount,
                 submittedAt: new Date().toLocaleString('id-ID')
             };
-
+// Kirim ke Supabase
+supabaseClient
+  .from('exam_results')
+  .insert([{
+    student_id: user.id,
+    student_name: user.name,
+    exam_id: session.exam.id,
+    exam_title: session.exam.title,
+    score: finalScore,
+    violations_count: session.violationCount
+  }])
+  .then(({ error }) => {
+    if (error) console.error("Gagal simpan ke Supabase:", error);
+    else console.log("Hasil ujian tersimpan ke Supabase!");
+  });
             AppState.examResults.push(resultObj);
             AppState.activeExamSession = null;
             antiCheatSetupDone = false;
