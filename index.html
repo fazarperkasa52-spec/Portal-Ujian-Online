@@ -1821,21 +1821,23 @@ if (typeof supabaseClient !== 'undefined') {
                 submittedAt: new Date().toLocaleString('id-ID')
             };
 // Kirim ke Supabase
-supabaseClient
-  .from('exam_results')
-  .insert([{
-    student_id: user.id,
-    student_name: user.name,
-    exam_id: session.exam.id,
-    exam_title: session.exam.title,
-    score: finalScore,
-    violations_count: session.violationCount
-  }])
-  .then(({ error }) => {
-    if (error) console.error("Gagal simpan ke Supabase:", error);
-    else console.log("Hasil ujian tersimpan ke Supabase!");
-  });
-            AppState.examResults.push(resultObj);
+// --- SISIPKAN KODE SUPABASE DI SINI ---
+            if (typeof supabaseClient !== 'undefined') {
+                supabaseClient
+                    .from('exam_results')
+                    .insert([{
+                        student_id: user.id,
+                        student_name: user.name,
+                        exam_id: session.exam.id,
+                        exam_title: session.exam.title,
+                        score: finalScore,
+                        violations_count: session.violationCount
+                    }])
+                    .then(({ error }) => {
+                        if (error) console.error("Gagal simpan ke Supabase:", error);
+                        else console.log("Hasil ujian berhasil dikirim ke Supabase!");
+                    });
+            }            AppState.examResults.push(resultObj);
             AppState.activeExamSession = null;
             antiCheatSetupDone = false;
 
